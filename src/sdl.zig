@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const c = @import("c");
+pub const c = @import("c");
 
 pub const alpha_opaque_float = c.SDL_ALPHA_OPAQUE_FLOAT;
 pub const pi_d = c.SDL_PI_D;

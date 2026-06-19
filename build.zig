@@ -1,5 +1,18 @@
 const std = @import("std");
 
+pub fn glslc(
+    b: *std.Build,
+    exe: *std.Build.Step.Compile,
+    input: std.Build.LazyPath,
+    name: []const u8,
+) void {
+    const tool_run = b.addSystemCommand(&.{"glslc"});
+    tool_run.addFileArg(input);
+    tool_run.addArg("-o");
+    const path = tool_run.addOutputFileArg(name);
+    exe.root_module.addAnonymousImport(name, .{ .root_source_file = path });
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -8,6 +21,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
     const exe = b.addExecutable(.{
         .name = "learn-sdl-gpu",
         .root_module = b.createModule(.{
@@ -20,6 +34,10 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+
+    glslc(b, exe, b.path("src/shader.glsl.frag"), "shader.spv.frag");
+    glslc(b, exe, b.path("src/shader.glsl.vert"), "shader.spv.vert");
+
     b.installArtifact(exe);
     exe.root_module.linkSystemLibrary("SDL3", .{});
     const run_cmd = b.addRunArtifact(exe);
@@ -29,7 +47,6 @@ pub fn build(b: *std.Build) void {
     }
     const run_step = b.step("run", "Run learn-sdl-gpu");
     run_step.dependOn(&run_cmd.step);
-
     const exe_unit_tests = b.addTest(.{
         .root_module = exe.root_module,
     });

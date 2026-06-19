@@ -1,57 +1,46 @@
 const std = @import("std");
 const cast = std.math.lossyCast;
 
-const c = @import("c");
+const sdl = @import("sdl.zig");
 
 pub fn main(_: std.process.Init) !void {
-    _ = c.SDL_SetAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
+    try sdl.setAppMetadata("Example Renderer Clear", "1.0", "com.example.renderer-clear");
 
-    if (!c.SDL_Init(c.SDL_INIT_VIDEO)) {
-        std.log.err("Couldn't initialize SDL: {s}", .{c.SDL_GetError()});
-        return error.SDLAppFailure;
-    }
-    defer c.SDL_Quit();
+    try sdl.init(.{ .video = true });
+    defer sdl.quit();
 
-    var window: ?*c.SDL_Window = undefined;
-    var renderer: ?*c.SDL_Renderer = undefined;
-    if (!c.SDL_CreateWindowAndRenderer(
+    const window, const renderer = try sdl.createWindowAndRenderer(
         "learn-sdl-gpu",
         640,
         480,
-        c.SDL_WINDOW_RESIZABLE,
-        &window,
-        &renderer,
-    )) {
-        std.log.err("Couldn't create window/renderer: {s}", .{c.SDL_GetError()});
-        return error.SDLAppFailure;
-    }
-    defer c.SDL_DestroyWindow(window);
-    defer c.SDL_DestroyRenderer(renderer);
-
-    _ = c.SDL_SetRenderLogicalPresentation(
-        renderer,
-        640,
-        480,
-        c.SDL_LOGICAL_PRESENTATION_LETTERBOX,
+        .{ .resizable = true },
     );
+    defer window.destroy();
+    defer renderer.destroy();
 
-    var event: c.SDL_Event = undefined;
+    try renderer.setLogicalPresentation(640, 480, .letterbox);
 
-    blk: while (true) {
-        while (c.SDL_PollEvent(&event)) {
-            if (event.type == c.SDL_EVENT_QUIT) {
-                break :blk;
+    var running = true;
+
+    while (running) {
+        while (sdl.pollEvent()) |event| {
+            if (event.type == .quit) {
+                running = false;
             }
         }
 
-        const now: f64 = cast(f64, c.SDL_GetTicks()) / 1000.0;
-        const red: f32 = @floatCast(0.5 + 0.5 * c.SDL_sin(now));
-        const green: f32 = @floatCast(0.5 + 0.5 * c.SDL_sin(now + c.SDL_PI_D * 2 / 3));
-        const blue: f32 = @floatCast(0.5 + 0.5 * c.SDL_sin(now + c.SDL_PI_D * 4 / 3));
-        _ = c.SDL_SetRenderDrawColorFloat(renderer, red, green, blue, c.SDL_ALPHA_OPAQUE_FLOAT);
+        const now: f64 = cast(f64, sdl.getTicks()) / 1000.0;
+        const red: f32 = @floatCast(0.5 + 0.5 * sdl.sin(now));
+        const green: f32 = @floatCast(0.5 + 0.5 * sdl.sin(now + sdl.pi_d * 2 / 3));
+        const blue: f32 = @floatCast(0.5 + 0.5 * sdl.sin(now + sdl.pi_d * 4 / 3));
+        try renderer.setDrawColorFloat(red, green, blue, sdl.alpha_opaque_float);
 
-        _ = c.SDL_RenderClear(renderer);
+        try renderer.clear();
 
-        _ = c.SDL_RenderPresent(renderer);
+        try renderer.present();
     }
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
